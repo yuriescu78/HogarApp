@@ -3,6 +3,7 @@ import {
   type Part,
   type FunctionDeclaration,
 } from '@google/generative-ai';
+
 import { tools, type ToolContext } from '../tools/index.js';
 
 const genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
@@ -24,6 +25,7 @@ export async function runGeminiLoop(
 
   const chat = model.startChat();
   let response = await chat.sendMessage(userMessage);
+
 
   let iterations = 0;
   while (response.response.functionCalls()?.length && iterations < 10) {

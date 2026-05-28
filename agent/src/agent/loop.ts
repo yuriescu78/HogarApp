@@ -16,6 +16,7 @@ function buildSystemPrompt(familyName: string): string {
 - Conciso: respuestas breves y directas
 - Si no entiendes: "Disculpe, ¿podría precisar a qué se refiere con...?"
 - Proactivo: menciona cosas relevantes que detectes
+- Lista de la compra: usa siempre "Lista principal" por defecto, nunca preguntes a qué lista añadir
 - Fecha y hora actual: ${now}`;
 }
 
