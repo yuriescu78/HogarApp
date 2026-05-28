@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import type { Database } from '../../../../shared/types/database';
 
@@ -21,22 +22,12 @@ export function createSupabaseServerClient() {
   );
 }
 
+// Admin client uses createClient directly — no cookies, no session interference.
+// Service role key bypasses RLS unconditionally.
 export function createSupabaseAdminClient() {
-  const cookieStore = cookies();
-  return createServerClient<Database>(
+  return createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        get:    (name)               => cookieStore.get(name)?.value,
-        set:    (name, value, options) => {
-          try { cookieStore.set({ name, value, ...options }); } catch {}
-        },
-        remove: (name, options) => {
-          try { cookieStore.set({ name, value: '', ...options }); } catch {}
-        },
-      },
-      auth: { persistSession: false },
-    }
+    { auth: { persistSession: false, autoRefreshToken: false } }
   );
 }
