@@ -14,6 +14,15 @@ import { suggestMenuDeclaration, suggestMenuSchema } from './menu.js';
 import { addWeeklyMenu, addWeeklyMenuDeclaration, addWeeklyMenuSchema } from './menu.js';
 import { saveKnowledge, saveKnowledgeDeclaration, saveKnowledgeSchema } from './knowledge.js';
 import { searchKnowledge, searchKnowledgeDeclaration, searchKnowledgeSchema } from './knowledge.js';
+import { addChore, addChoreDeclaration, addChoreSchema } from './chores.js';
+import { queryChores, queryChoresDeclaration, queryChoresSchema } from './chores.js';
+import { logChore, logChoreDeclaration, logChoreSchema } from './chores.js';
+import { addPet, addPetDeclaration, addPetSchema } from './pets.js';
+import { addPetDiaryEntry, addPetDiaryEntryDeclaration, addPetDiaryEntrySchema } from './pets.js';
+import { addPetReminder, addPetReminderDeclaration, addPetReminderSchema } from './pets.js';
+import { queryPet, queryPetDeclaration, queryPetSchema } from './pets.js';
+import { saveInvestmentNote, saveInvestmentNoteDeclaration, saveInvestmentNoteSchema } from './investments.js';
+import { queryInvestmentNotes, queryInvestmentNotesDeclaration, queryInvestmentNotesSchema } from './investments.js';
 
 export interface ToolContext {
   supabase:  SupabaseClient;
@@ -114,6 +123,60 @@ export const tools: ToolDefinition[] = [
     schema: searchKnowledgeSchema,
     handler: (input, ctx) => searchKnowledge(input, ctx.supabase, ctx.familyId),
     declaration: searchKnowledgeDeclaration, useClaudeInstead: false,
+  },
+  {
+    name: 'add_chore', description: 'Añade una tarea doméstica',
+    schema: addChoreSchema,
+    handler: (input, ctx) => addChore(input, ctx.supabase, ctx.familyId),
+    declaration: addChoreDeclaration, useClaudeInstead: false,
+  },
+  {
+    name: 'query_chores', description: 'Consulta las tareas domésticas',
+    schema: queryChoresSchema,
+    handler: (input, ctx) => queryChores(input, ctx.supabase, ctx.familyId),
+    declaration: queryChoresDeclaration, useClaudeInstead: false,
+  },
+  {
+    name: 'log_chore', description: 'Registra una tarea como completada',
+    schema: logChoreSchema,
+    handler: (input, ctx) => logChore(input, ctx.supabase, ctx.familyId),
+    declaration: logChoreDeclaration, useClaudeInstead: false,
+  },
+  {
+    name: 'add_pet', description: 'Registra una mascota',
+    schema: addPetSchema,
+    handler: (input, ctx) => addPet(input, ctx.supabase, ctx.familyId),
+    declaration: addPetDeclaration, useClaudeInstead: false,
+  },
+  {
+    name: 'add_pet_diary_entry', description: 'Añade entrada al diario de una mascota',
+    schema: addPetDiaryEntrySchema,
+    handler: (input, ctx) => addPetDiaryEntry(input, ctx.supabase, ctx.familyId),
+    declaration: addPetDiaryEntryDeclaration, useClaudeInstead: false,
+  },
+  {
+    name: 'add_pet_reminder', description: 'Añade recordatorio para una mascota',
+    schema: addPetReminderSchema,
+    handler: (input, ctx) => addPetReminder(input, ctx.supabase, ctx.familyId),
+    declaration: addPetReminderDeclaration, useClaudeInstead: false,
+  },
+  {
+    name: 'query_pet', description: 'Consulta info y diario de una mascota',
+    schema: queryPetSchema,
+    handler: (input, ctx) => queryPet(input, ctx.supabase, ctx.familyId),
+    declaration: queryPetDeclaration, useClaudeInstead: false,
+  },
+  {
+    name: 'save_investment_note', description: 'Guarda nota de inversión o finanzas',
+    schema: saveInvestmentNoteSchema,
+    handler: (input, ctx) => saveInvestmentNote(input, ctx.supabase, ctx.familyId),
+    declaration: saveInvestmentNoteDeclaration, useClaudeInstead: false,
+  },
+  {
+    name: 'query_investment_notes', description: 'Consulta notas de inversión (enmascaradas)',
+    schema: queryInvestmentNotesSchema,
+    handler: (input, ctx) => queryInvestmentNotes(input, ctx.supabase, ctx.familyId),
+    declaration: queryInvestmentNotesDeclaration, useClaudeInstead: false,
   },
 ];
 

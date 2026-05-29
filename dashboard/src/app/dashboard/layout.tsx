@@ -12,6 +12,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <Link href="/dashboard/calendar" className="hover:text-white transition-colors">Agenda</Link>
         <Link href="/dashboard/notes"    className="hover:text-white transition-colors">Notas</Link>
         <Link href="/dashboard/recipes"  className="hover:text-white transition-colors">Recetas</Link>
+        <Link href="/dashboard/chores"   className="hover:text-white transition-colors">Tareas</Link>
+        <Link href="/dashboard/pets"     className="hover:text-white transition-colors">Mascotas</Link>
       </nav>
       <div>{children}</div>
     </div>
