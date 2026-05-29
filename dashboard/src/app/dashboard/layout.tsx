@@ -10,6 +10,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <Link href="/dashboard"          className="hover:text-white transition-colors">Inicio</Link>
         <Link href="/dashboard/shopping" className="hover:text-white transition-colors">La compra</Link>
         <Link href="/dashboard/calendar" className="hover:text-white transition-colors">Agenda</Link>
+        <Link href="/dashboard/notes"    className="hover:text-white transition-colors">Notas</Link>
+        <Link href="/dashboard/recipes"  className="hover:text-white transition-colors">Recetas</Link>
       </nav>
       <div>{children}</div>
     </div>
