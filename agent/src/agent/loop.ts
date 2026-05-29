@@ -1,4 +1,6 @@
 import { Bot, type Context } from 'grammy';
+import OpenAI from 'openai';
+import { toFile } from 'openai';
 import { supabase } from '../utils/supabase.js';
 import { containsSensitiveData } from '../utils/masking.js';
 import { runGeminiLoop } from './gemini.js';
@@ -7,6 +9,7 @@ import type { ToolContext } from '../tools/index.js';
 
 const FAMILY_ID = process.env.FAMILY_ID!;
 const TIMEZONE  = process.env.TIMEZONE ?? 'Europe/Madrid';
+const openai    = new OpenAI();
 
 function buildSystemPrompt(familyName: string): string {
   const now = new Date().toLocaleString('es-ES', { timeZone: TIMEZONE });
@@ -29,6 +32,18 @@ async function getFamilyName(): Promise<string> {
   return data?.name ?? 'García';
 }
 
+async function transcribeVoice(fileUrl: string): Promise<string> {
+  const res     = await fetch(fileUrl);
+  const buffer  = Buffer.from(await res.arrayBuffer());
+  const oggFile = await toFile(buffer, 'voice.ogg', { type: 'audio/ogg' });
+  const result  = await openai.audio.transcriptions.create({
+    file:     oggFile,
+    model:    'whisper-1',
+    language: 'es',
+  });
+  return result.text;
+}
+
 async function logCommand(
   inputType: 'text' | 'voice',
   rawInput: string | null,
@@ -36,10 +51,10 @@ async function logCommand(
   success: boolean
 ) {
   await supabase.from('voice_logs').insert({
-    family_id:     FAMILY_ID,
-    input_type:    inputType,
-    raw_input:     rawInput,
-    tool_used:     toolUsed,
+    family_id:  FAMILY_ID,
+    input_type: inputType,
+    raw_input:  rawInput,
+    tool_used:  toolUsed,
     success,
   });
 }
@@ -48,10 +63,24 @@ export function createBot(): Bot {
   const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN!);
 
   bot.on('message', async (ctx: Context) => {
-    // Phase 0: text only — voice deferred to Phase 1
-    const text = ctx.message?.text;
+    let text: string | undefined;
+    let inputType: 'text' | 'voice' = 'text';
+
+    if (ctx.message?.text) {
+      text = ctx.message.text;
+    } else if (ctx.message?.voice) {
+      inputType = 'voice';
+      try {
+        const file   = await ctx.getFile();
+        const apiUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
+        text = await transcribeVoice(apiUrl);
+      } catch {
+        await ctx.reply('Disculpe, no pude transcribir el audio. Por favor escríbame.');
+        return;
+      }
+    }
+
     if (!text) return;
-    const inputType = 'text' as const;
 
     // Validate sender belongs to this family and is active
     const senderId = ctx.from?.id;
@@ -91,8 +120,7 @@ export function createBot(): Bot {
       // Gemini unavailable — try regex fallback
       const fallback = parseFallback(text);
       if (fallback?.tool === 'add_shopping_items') {
-        const { addShoppingItems } = await import('../tools/shopping.js');
-        const { addShoppingItemsSchema } = await import('../tools/shopping.js');
+        const { addShoppingItems, addShoppingItemsSchema } = await import('../tools/shopping.js');
         const parsed = addShoppingItemsSchema.parse({ items: fallback.items });
         const result = await addShoppingItems(parsed, supabase, FAMILY_ID);
         const reply = result.success
