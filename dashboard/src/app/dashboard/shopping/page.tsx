@@ -17,188 +17,114 @@ export default async function ShoppingPage() {
 
   const pending = items?.filter(i => !i.checked) ?? [];
   const done    = items?.filter(i =>  i.checked) ?? [];
+  const isEmpty = pending.length === 0 && done.length === 0;
 
   return (
-    <div style={{ background: 'var(--bg-base)', minHeight: '100vh' }}>
+    <div className="sl-app">
 
-      {/* Header sticky iOS-style */}
-      <header
-        className="sticky top-0 px-5 pb-4 pt-10"
-        style={{
-          background: 'rgba(15,15,17,0.95)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          borderBottom: '0.5px solid var(--border)',
-        }}
-      >
-        <div className="flex items-center gap-2 mb-1">
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #6e40c9, #c940a0)' }}
-          >
-            G
-          </div>
-          <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-            Familia García
-          </span>
+      <header className="sl-header">
+        <div className="sl-family-row">
+          <div className="sl-avatar" aria-hidden="true">G</div>
+          <span className="sl-family-name">Familia García</span>
         </div>
 
-        <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
-          La compra
-        </h1>
+        <h1 className="sl-title">La compra</h1>
 
-        <div className="flex gap-2 mt-1.5">
+        <div className="sl-badges" role="status" aria-live="polite">
           {pending.length > 0 && (
-            <span
-              className="text-xs font-bold px-2.5 py-0.5 rounded-full text-white"
-              style={{ background: 'var(--red)' }}
-            >
-              {pending.length} pendientes
-            </span>
+            <span className="sl-badge sl-badge-pending">{pending.length} pendientes</span>
           )}
           {done.length > 0 && (
-            <span
-              className="text-xs font-bold px-2.5 py-0.5 rounded-full text-white"
-              style={{ background: 'var(--green)' }}
-            >
-              {done.length} comprados
-            </span>
+            <span className="sl-badge sl-badge-done">{done.length} comprados</span>
           )}
         </div>
       </header>
 
-      {/* Contenido */}
-      <div className="px-4 py-5 space-y-6">
+      <main className="sl-main">
 
-        {/* Lista vacía */}
-        {pending.length === 0 && done.length === 0 && (
-          <p className="text-center py-12 text-sm" style={{ color: 'var(--text-tertiary)' }}>
-            Lista vacía. Dile a JARVIS por Telegram qué añadir.
+        {isEmpty && (
+          <p className="sl-empty">
+            <strong>Lista vacía</strong>
+            Dile a JARVIS por Telegram qué añadir.
           </p>
         )}
 
-        {/* Pendientes */}
         {pending.length > 0 && (
-          <section>
-            <p
-              className="text-xs font-semibold uppercase tracking-wider mb-2 px-1"
-              style={{ color: 'var(--text-tertiary)' }}
-            >
-              Pendientes
-            </p>
-            <div
-              className="rounded-2xl overflow-hidden"
-              style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
-            >
-              {pending.map((item, idx) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-3.5 px-4 py-3.5"
-                  style={idx > 0 ? { borderTop: '0.5px solid var(--border)' } : undefined}
-                >
-                  <form action={toggleItem.bind(null, item.id, true)}>
+          <section className="sl-section" aria-labelledby="lbl-pending">
+            <h2 id="lbl-pending" className="sl-section-label">Pendientes</h2>
+            <ul className="sl-card" role="list">
+              {pending.map(item => (
+                <li key={item.id} className="sl-item">
+                  <form action={toggleItem.bind(null, item.id, true)} className="sl-form-inline">
                     <button
                       type="submit"
-                      className="w-6 h-6 rounded-full flex-shrink-0"
-                      style={{ border: '2px solid #3a3a3c', background: 'transparent' }}
+                      className="sl-check"
                       aria-label={`Marcar ${item.name} como comprado`}
                     />
                   </form>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-base" style={{ color: 'var(--text-primary)' }}>{item.name}</p>
-                    {item.quantity && (
-                      <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-                        {item.quantity}
-                      </p>
-                    )}
+                  <div className="sl-item-body">
+                    <div className="sl-item-name">{item.name}</div>
+                    {item.quantity && <div className="sl-item-qty">{item.quantity}</div>}
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           </section>
         )}
 
-        {/* Comprados */}
         {done.length > 0 && (
-          <section>
-            <p
-              className="text-xs font-semibold uppercase tracking-wider mb-2 px-1"
-              style={{ color: 'var(--text-tertiary)' }}
-            >
-              Ya en el carrito
-            </p>
-            <div
-              className="rounded-2xl overflow-hidden"
-              style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
-            >
-              {done.map((item, idx) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-3.5 px-4 py-3.5 opacity-40"
-                  style={idx > 0 ? { borderTop: '0.5px solid var(--border)' } : undefined}
-                >
-                  <form action={toggleItem.bind(null, item.id, false)}>
+          <section className="sl-section" aria-labelledby="lbl-done">
+            <h2 id="lbl-done" className="sl-section-label">Ya en el carrito</h2>
+            <ul className="sl-card" role="list">
+              {done.map(item => (
+                <li key={item.id} className="sl-item sl-item-done">
+                  <form action={toggleItem.bind(null, item.id, false)} className="sl-form-inline">
                     <button
                       type="submit"
-                      className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center"
-                      style={{ background: 'var(--green)', border: '2px solid var(--green)' }}
+                      className="sl-check sl-check-done"
                       aria-label={`Desmarcar ${item.name}`}
                     >
-                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                        <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <svg viewBox="0 0 12 10" fill="none" aria-hidden="true">
+                        <path d="M1.5 5L4.5 7.5L10.5 1.5"
+                              stroke="#fff" strokeWidth="2"
+                              strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     </button>
                   </form>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-base line-through" style={{ color: 'var(--text-secondary)' }}>
-                      {item.name}
-                    </p>
-                    {item.quantity && (
-                      <p className="text-sm mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-                        {item.quantity}
-                      </p>
-                    )}
+                  <div className="sl-item-body">
+                    <div className="sl-item-name">{item.name}</div>
+                    {item.quantity && <div className="sl-item-qty">{item.quantity}</div>}
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
 
-            <form action={clearChecked} className="mt-2">
+            <form action={clearChecked}>
               <button
                 type="submit"
-                className="w-full py-3.5 rounded-2xl text-sm font-medium transition-opacity hover:opacity-80"
-                style={{
-                  background: 'var(--bg-surface)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--red)',
-                }}
+                className="sl-clear-btn"
+                aria-label={`Limpiar ${done.length} artículos comprados`}
               >
-                🗑 Limpiar {done.length} comprados
+                <svg viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                  <path d="M1.5 3.5h11M5.5 3.5V2a1 1 0 011-1h1a1 1 0 011 1v1.5M3 3.5l.6 8.4a1 1 0 001 .9h4.8a1 1 0 001-.9l.6-8.4"
+                        stroke="currentColor" strokeWidth="1.5"
+                        strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Limpiar {done.length} comprados
               </button>
             </form>
           </section>
         )}
 
-        {/* Banner JARVIS */}
-        <div
-          className="rounded-2xl p-4 flex items-center gap-3"
-          style={{
-            background: 'linear-gradient(135deg, #2d1f6e, #4a1a5e)',
-            border: '1px solid #3d2a7a',
-          }}
-        >
-          <span className="text-2xl flex-shrink-0">🎩</span>
-          <div>
-            <p className="text-sm font-semibold" style={{ color: '#c4a8ff' }}>
-              JARVIS al habla
-            </p>
-            <p className="text-xs leading-relaxed mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-              Dígame por Telegram qué añadir y lo tendré listo al instante.
-            </p>
+        <aside className="sl-jarvis" role="note">
+          <div className="sl-jarvis-icon" aria-hidden="true">🎩</div>
+          <div className="sl-jarvis-text">
+            <strong>JARVIS al habla</strong>
+            <span>Dígame por Telegram qué añadir y lo tendré listo al instante.</span>
           </div>
-        </div>
+        </aside>
 
-      </div>
+      </main>
     </div>
   );
 }
