@@ -14,9 +14,7 @@ export async function runGeminiLoop(
   ctx: ToolContext,
   systemPrompt: string
 ): Promise<string> {
-  const declarations = tools
-    .filter(t => !t.useClaudeInstead)
-    .map(t => t.declaration as unknown as FunctionDeclaration);
+  const declarations = tools.map(t => t.declaration as unknown as FunctionDeclaration);
 
   const model = genai.getGenerativeModel({
     model:             'gemini-2.5-flash',
@@ -55,6 +53,20 @@ export async function runGeminiLoop(
             name:     call.name,
             response: { error: parsed.error.message },
           },
+        });
+        continue;
+      }
+
+      // Route to Claude Sonnet for long-reasoning tools (e.g. suggest_menu)
+      if (tool.useClaudeInstead) {
+        const { runClaudeForMenu } = await import('./claude.js');
+        const suggestion = await runClaudeForMenu(
+          parsed.data as { days?: number; note?: string },
+          ctx.supabase,
+          ctx.familyId
+        );
+        resultParts.push({
+          functionResponse: { name: call.name, response: { suggestion } },
         });
         continue;
       }

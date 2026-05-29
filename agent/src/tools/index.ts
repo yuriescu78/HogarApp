@@ -7,6 +7,13 @@ import { clearCheckedItems, clearCheckedItemsDeclaration, clearCheckedItemsSchem
 import { addCalendarEvent, addCalendarEventDeclaration, addCalendarEventSchema } from './calendar.js';
 import { queryCalendar, queryCalendarDeclaration, queryCalendarSchema } from './calendar.js';
 import { addReminder, addReminderDeclaration, addReminderSchema } from './reminder.js';
+import { createNote, createNoteDeclaration, createNoteSchema } from './notes.js';
+import { queryNotes, queryNotesDeclaration, queryNotesSchema } from './notes.js';
+import { addRecipe, addRecipeDeclaration, addRecipeSchema } from './recipes.js';
+import { suggestMenuDeclaration, suggestMenuSchema } from './menu.js';
+import { addWeeklyMenu, addWeeklyMenuDeclaration, addWeeklyMenuSchema } from './menu.js';
+import { saveKnowledge, saveKnowledgeDeclaration, saveKnowledgeSchema } from './knowledge.js';
+import { searchKnowledge, searchKnowledgeDeclaration, searchKnowledgeSchema } from './knowledge.js';
 
 export interface ToolContext {
   supabase:  SupabaseClient;
@@ -65,6 +72,48 @@ export const tools: ToolDefinition[] = [
     schema: addReminderSchema,
     handler: (input, ctx) => addReminder(input, ctx.supabase, ctx.familyId),
     declaration: addReminderDeclaration, useClaudeInstead: false,
+  },
+  {
+    name: 'create_note', description: 'Guarda una nota en la bitácora',
+    schema: createNoteSchema,
+    handler: (input, ctx) => createNote(input, ctx.supabase, ctx.familyId),
+    declaration: createNoteDeclaration, useClaudeInstead: false,
+  },
+  {
+    name: 'query_notes', description: 'Busca notas en la bitácora',
+    schema: queryNotesSchema,
+    handler: (input, ctx) => queryNotes(input, ctx.supabase, ctx.familyId),
+    declaration: queryNotesDeclaration, useClaudeInstead: false,
+  },
+  {
+    name: 'add_recipe', description: 'Guarda una receta',
+    schema: addRecipeSchema,
+    handler: (input, ctx) => addRecipe(input, ctx.supabase, ctx.familyId),
+    declaration: addRecipeDeclaration, useClaudeInstead: false,
+  },
+  {
+    name: 'suggest_menu', description: 'Sugiere menú semanal personalizado (Claude Sonnet)',
+    schema: suggestMenuSchema,
+    handler: async () => ({ suggestion: 'Handled by Claude' }),
+    declaration: suggestMenuDeclaration, useClaudeInstead: true,
+  },
+  {
+    name: 'add_weekly_menu', description: 'Guarda el menú semanal',
+    schema: addWeeklyMenuSchema,
+    handler: (input, ctx) => addWeeklyMenu(input, ctx.supabase, ctx.familyId),
+    declaration: addWeeklyMenuDeclaration, useClaudeInstead: false,
+  },
+  {
+    name: 'save_knowledge', description: 'Guarda en la base de conocimiento',
+    schema: saveKnowledgeSchema,
+    handler: (input, ctx) => saveKnowledge(input, ctx.supabase, ctx.familyId),
+    declaration: saveKnowledgeDeclaration, useClaudeInstead: false,
+  },
+  {
+    name: 'search_knowledge', description: 'Búsqueda semántica en conocimiento',
+    schema: searchKnowledgeSchema,
+    handler: (input, ctx) => searchKnowledge(input, ctx.supabase, ctx.familyId),
+    declaration: searchKnowledgeDeclaration, useClaudeInstead: false,
   },
 ];
 
