@@ -1,0 +1,25 @@
+app = "jarvis-agent"
+primary_region = "mad"
+
+[build]
+
+[env]
+  NODE_ENV = "production"
+  TIMEZONE = "Europe/Madrid"
+
+# The agent is a long-running process — no HTTP server needed.
+# Fly keeps it alive via the process model.
+[[services]]
+  internal_port = 3000
+  protocol = "tcp"
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[checks]
+  # No HTTP health checks; rely on process supervision.
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
