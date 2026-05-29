@@ -18,64 +18,103 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
-
     const { error } = await supabase.auth.signInWithOtp({ email });
-
     setLoading(false);
-    if (error) {
-      setError(error.message);
-    } else {
-      setStep('otp');
-    }
+    if (error) setError(error.message);
+    else setStep('otp');
   }
 
   async function handleVerifyOtp(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError('');
-
-    const { error } = await supabase.auth.verifyOtp({
-      email,
-      token,
-      type: 'email',
-    });
-
+    const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
     setLoading(false);
-    if (error) {
-      setError(error.message);
-    } else {
-      router.push('/dashboard');
-    }
+    if (error) setError(error.message);
+    else router.push('/dashboard');
   }
+
+  const containerStyle: React.CSSProperties = {
+    minHeight: '100vh',
+    background: 'var(--bg-base)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '24px',
+  };
+
+  const cardStyle: React.CSSProperties = {
+    width: '100%',
+    maxWidth: '320px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '12px 14px',
+    borderRadius: '12px',
+    border: '1px solid var(--border)',
+    background: 'var(--bg-surface)',
+    color: 'var(--text-primary)',
+    fontSize: '15px',
+    outline: 'none',
+  };
+
+  const btnPrimaryStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '13px',
+    borderRadius: '12px',
+    border: 'none',
+    background: 'linear-gradient(135deg, #6e40c9, #c940a0)',
+    color: '#fff',
+    fontSize: '15px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    opacity: loading ? 0.6 : 1,
+  };
 
   if (step === 'otp') {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <form onSubmit={handleVerifyOtp} className="flex flex-col gap-4 w-80">
-          <h1 className="text-2xl font-semibold">JARVIS</h1>
-          <p className="text-sm text-gray-600">Introduce el código de 6 dígitos enviado a {email}</p>
+      <main style={containerStyle}>
+        <form onSubmit={handleVerifyOtp} style={cardStyle}>
+          <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: 36 }}>🎩</span>
+            <h1 style={{ fontSize: '22px', fontWeight: 700, marginTop: '4px', color: 'var(--text-primary)' }}>
+              JARVIS
+            </h1>
+          </div>
+
+          <p style={{ fontSize: '14px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+            Introduce el código enviado a<br />
+            <span style={{ color: 'var(--text-primary)' }}>{email}</span>
+          </p>
+
           <input
             type="text"
+            inputMode="numeric"
             placeholder="123456"
             value={token}
             onChange={e => setToken(e.target.value)}
             required
             maxLength={6}
-            className="border rounded px-3 py-2 text-center text-2xl tracking-widest"
             autoFocus
+            style={{ ...inputStyle, textAlign: 'center', fontSize: '24px', letterSpacing: '0.3em' }}
           />
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-black text-white rounded px-4 py-2 disabled:opacity-50"
-          >
-            {loading ? 'Verificando...' : 'Entrar'}
+
+          {error && (
+            <p style={{ fontSize: '13px', textAlign: 'center', color: 'var(--red)' }}>{error}</p>
+          )}
+
+          <button type="submit" disabled={loading} style={btnPrimaryStyle}>
+            {loading ? 'Verificando…' : 'Entrar'}
           </button>
+
           <button
             type="button"
             onClick={() => setStep('email')}
-            className="text-sm text-gray-500 underline"
+            style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '14px' }}
           >
             Volver
           </button>
@@ -85,24 +124,33 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <form onSubmit={handleSendOtp} className="flex flex-col gap-4 w-80">
-        <h1 className="text-2xl font-semibold">JARVIS</h1>
+    <main style={containerStyle}>
+      <form onSubmit={handleSendOtp} style={cardStyle}>
+        <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+          <span style={{ fontSize: 36 }}>🎩</span>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, marginTop: '4px', color: 'var(--text-primary)' }}>
+            JARVIS
+          </h1>
+          <p style={{ fontSize: '13px', marginTop: '4px', color: 'var(--text-secondary)' }}>
+            Mayordomo digital de la familia García
+          </p>
+        </div>
+
         <input
           type="email"
           placeholder="tu@email.com"
           value={email}
           onChange={e => setEmail(e.target.value)}
           required
-          className="border rounded px-3 py-2"
+          style={inputStyle}
         />
-        {error && <p className="text-red-500 text-sm">{error}</p>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-black text-white rounded px-4 py-2 disabled:opacity-50"
-        >
-          {loading ? 'Enviando...' : 'Enviar código'}
+
+        {error && (
+          <p style={{ fontSize: '13px', textAlign: 'center', color: 'var(--red)' }}>{error}</p>
+        )}
+
+        <button type="submit" disabled={loading} style={btnPrimaryStyle}>
+          {loading ? 'Enviando…' : 'Enviar código'}
         </button>
       </form>
     </main>

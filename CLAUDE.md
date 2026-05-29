@@ -4,8 +4,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > JARVIS — Mayordomo digital familiar con personalidad británica. Telegram Bot + Dashboard Next.js + Agente Node.js + Supabase.
 
-**This is a greenfield project — no code exists yet. Always begin with `supabase/migrations/001_initial_schema.sql`.**
-
 ---
 
 ## Commands
@@ -15,10 +13,12 @@ All commands must be run from inside the workspace subdirectory (`cd agent/` or 
 ### Agent (`agent/`)
 ```bash
 npm install
-npm run dev        # watch mode
+npm run dev        # tsx watch mode
 npm run build
 npm start          # run compiled output
 npm run typecheck
+npm test           # vitest run (single pass)
+npm run test:watch # vitest watch
 ```
 
 ### Dashboard (`dashboard/`)
@@ -28,6 +28,7 @@ npm run dev        # http://localhost:3000
 npm run build
 npm run typecheck
 npm run lint
+npm test           # vitest run
 ```
 
 ### Supabase
@@ -43,16 +44,19 @@ supabase db reset
 
 Three independently deployable pieces. There is **no shared HTTP API** — agent and dashboard both talk directly to Supabase.
 
-**`agent/`** — Long-running Node.js 20+ TypeScript process. Grammy handles Telegram webhooks/polling; node-cron handles scheduled jobs. Core loop at `agent/src/agent/loop.ts`:
+**`agent/`** — Long-running Node.js 20+ TypeScript process. Grammy handles Telegram polling; `agent/src/agent/loop.ts` is the message handler:
 ```
-Telegram message (text or audio)
-  -> [audio] Whisper STT -> text
-  -> Gemini 2.5 Flash + system prompt + 25 tools + family context
+Telegram message (text or voice)
+  -> [voice] OpenAI Whisper STT -> text
+  -> member auth check via family_members.telegram_id
+  -> sensitive data precheck (ADR-001: block before any LLM call)
+  -> runGeminiLoop (gemini-2.5-flash + tools + system prompt)
   -> tool execution -> Supabase INSERT/SELECT
-  -> Gemini composes response
-  -> Telegram reply (text + optional Google Cloud TTS audio)
+  -> Gemini composes response -> ctx.reply()
 ```
-Emergency fallback (`agent/src/agent/fallback-parser.ts`): regex covers `add_shopping`, `query_today`, `check_item`, `create_note`, `query_calendar` when Gemini is unavailable.
+Fallback (`agent/src/agent/fallback-parser.ts`): regex for `add_shopping_items`, `query_shopping`, `check_shopping_item` when Gemini throws. Loop catches the exception and tries fallback before replying with a generic error.
+
+`agent/src/agent/gemini.ts` runs the Gemini tool-call loop (max 10 iterations). Each tool's Gemini `declaration` (function schema) is exported alongside its Zod `schema` and `handler` from its own file.
 
 **`dashboard/`** — Next.js 14 App Router, Vercel deploy. Magic link auth via Supabase SSR. Server Components use service role key; Client Components use anon key.
 
@@ -64,21 +68,26 @@ Emergency fallback (`agent/src/agent/fallback-parser.ts`): regex covers `add_sho
 
 ## Tool Registry Pattern
 
-Each tool lives in `agent/src/tools/` and is registered in `agent/src/tools/index.ts`:
+Each tool lives in `agent/src/tools/` and exports three things, then gets registered in `agent/src/tools/index.ts`:
 
 ```typescript
+// myTool.ts
 export const myToolSchema = z.object({ ... });
-export async function myTool(input: z.infer<typeof myToolSchema>, ctx: ToolContext) {
-  const { data, error } = await ctx.supabase.from('...').insert({ family_id: ctx.familyId, ... });
+export const myToolDeclaration = { name: 'my_tool', description: '...', parameters: { ... } }; // Gemini FunctionDeclaration format
+export async function myTool(input: z.infer<typeof myToolSchema>, supabase: SupabaseClient, familyId: string) {
+  const { data, error } = await supabase.from('...').insert({ family_id: familyId, ... });
   if (error) return { success: false, error: error.message };
   return { success: true };
 }
 
-// Registry entry
-{ name: 'my_tool', description: '...', schema: myToolSchema, handler: myTool, useClaudeInstead: false }
+// index.ts entry
+{ name: 'my_tool', description: '...', schema: myToolSchema, declaration: myToolDeclaration,
+  handler: (input, ctx) => myTool(input, ctx.supabase, ctx.familyId), useClaudeInstead: false }
 ```
 
-`useClaudeInstead: true` routes the tool to `agent/src/agent/claude.ts` (Claude Sonnet) instead of Gemini. Reserved for long-reasoning tasks — currently only `suggest_menu`.
+Currently implemented tools: `add_shopping_items`, `query_shopping`, `check_shopping_item`, `clear_checked_items`, `add_calendar_event`, `query_calendar`, `add_reminder`.
+
+`useClaudeInstead: true` is reserved for routing to a Claude Sonnet agent for long-reasoning tasks (e.g. `suggest_menu`) — the Claude integration (`agent/src/agent/claude.ts`) is not yet implemented.
 
 ---
 
@@ -142,9 +151,11 @@ Eres JARVIS, el mayordomo digital de la familia {family_name}.
 
 ## Current Phase
 
-**Phase 0** (not started): `supabase/migrations/001_initial_schema.sql` -> `agent/` wired to Telegram + Supabase + Gemini -> `add_shopping_items` tool end-to-end -> `dashboard/` with Next.js + Supabase SSR + magic link auth -> `supabase/seed.sql` with example family.
+**Phase 0** (complete): Schema migrated, agent wired to Telegram + Supabase + Gemini, shopping + calendar + reminder tools live, dashboard with Next.js SSR + magic link auth, `supabase/seed.sql` exists.
 
-Subsequent phases: Lista compra + Agenda + Voz (Fase 1) | Bitacora + Menus + embeddings (Fase 2) | Tareas + Mascotas + Inversiones (Fase 3) | Rutinas + deploy (Fase 4) | React Native si Telegram se queda corto (Fase 5).
+**Next — Fase 1**: Notas, bitácora de voz, Google Calendar sync, TTS replies.
+
+Subsequent phases: Bitacora + Menus + embeddings (Fase 2) | Tareas + Mascotas + Inversiones (Fase 3) | Rutinas + deploy (Fase 4) | React Native si Telegram se queda corto (Fase 5).
 
 ---
 

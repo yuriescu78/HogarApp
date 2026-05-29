@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment variables (NEVER commit)
+.env
+.env.local
+.env*.local
+
+# Next.js
+.next/
+out/
+
+# Build output
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local tooling state
+.gstack/
+.agents/
+.claude/settings.local.json
+npx
+
+# Generated mockups (design artifacts, not source)
+dashboard/mockups/
+docs/mockups/
+
+# Supabase local state
+supabase/.branches/
+supabase/.temp/
+
+# Lock files for skills
+skills-lock.json
+
+# OS
+.DS_Store
+Thumbs.db
