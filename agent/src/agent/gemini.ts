@@ -1,5 +1,6 @@
 import {
   GoogleGenerativeAI,
+  FunctionCallingMode,
   type Part,
   type FunctionDeclaration,
 } from '@google/generative-ai';
@@ -21,11 +22,13 @@ export async function runGeminiLoop(
     model:             'gemini-2.5-flash',
     systemInstruction: systemPrompt,
     tools:             [{ functionDeclarations: declarations }],
+    toolConfig: {
+      functionCallingConfig: { mode: FunctionCallingMode.AUTO },
+    },
   });
 
   const chat = model.startChat();
   let response = await chat.sendMessage(userMessage);
-
 
   let iterations = 0;
   while (response.response.functionCalls()?.length && iterations < 10) {
