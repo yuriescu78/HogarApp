@@ -17,12 +17,14 @@ for (const key of required) {
 
 const bot = createBot();
 
-startReminderDispatcher(bot.api);
-startMorningBriefing(bot.api);
+if (process.env.NODE_ENV !== 'production') {
+  startReminderDispatcher(bot.api);
+  startMorningBriefing(bot.api);
 
-bot.start({
-  onStart: () => console.log('JARVIS online'),
-});
+  bot.start({ onStart: () => console.log('JARVIS online (polling)') });
 
-process.once('SIGINT',  () => bot.stop());
-process.once('SIGTERM', () => bot.stop());
+  process.once('SIGINT',  () => bot.stop());
+  process.once('SIGTERM', () => bot.stop());
+} else {
+  console.log('Production: webhook mode active on Vercel. Polling disabled.');
+}
