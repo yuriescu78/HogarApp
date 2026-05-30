@@ -44,7 +44,9 @@ supabase db reset
 
 Three independently deployable pieces. There is **no shared HTTP API** — agent and dashboard both talk directly to Supabase.
 
-**`agent/`** — Long-running Node.js 20+ TypeScript process. Grammy handles Telegram polling; `agent/src/agent/loop.ts` is the message handler:
+**`agent/`** — Long-running Node.js 20+ TypeScript process. Grammy handles Telegram **polling in development only** (`NODE_ENV !== 'production'`). In production, Telegram updates arrive via the dashboard webhook — the agent process is not needed on Vercel.
+
+`agent/src/agent/loop.ts` is the message handler:
 ```
 Telegram message (text or voice)
   -> [voice] OpenAI Whisper STT -> text
@@ -59,6 +61,12 @@ Fallback (`agent/src/agent/fallback-parser.ts`): regex for `add_shopping_items`,
 `agent/src/agent/gemini.ts` runs the Gemini tool-call loop (max 10 iterations). Each tool's Gemini `declaration` (function schema) is exported alongside its Zod `schema` and `handler` from its own file.
 
 **`dashboard/`** — Next.js 14 App Router, Vercel deploy. Magic link auth via Supabase SSR. Server Components use service role key; Client Components use anon key.
+
+Telegram webhook lives entirely in `dashboard/` as two API routes:
+- `POST /api/telegram` — receives updates from Telegram; verifies `X-Telegram-Bot-Api-Secret-Token` header; calls `bot.handleUpdate(body)` inside Vercel's `waitUntil` so the function returns 200 immediately while the handler runs.
+- `GET /api/telegram/setup?secret=<TELEGRAM_WEBHOOK_SECRET>` — registers the webhook URL with Telegram via `setWebhook`. Call once after each deploy: `curl "https://<domain>/api/telegram/setup?secret=<secret>"`
+
+Tool logic for the webhook is duplicated in `dashboard/src/lib/jarvis/` (mirrors `agent/src/` for Vercel serverless context, which cannot import from `agent/`).
 
 **`supabase/`** — Schema source of truth. All tables carry `family_id` for Row Level Security. Only `knowledge_entries` has `embedding vector(768)` (Gemini text-embedding-004).
 
@@ -85,9 +93,9 @@ export async function myTool(input: z.infer<typeof myToolSchema>, supabase: Supa
   handler: (input, ctx) => myTool(input, ctx.supabase, ctx.familyId), useClaudeInstead: false }
 ```
 
-Currently implemented tools: `add_shopping_items`, `query_shopping`, `check_shopping_item`, `clear_checked_items`, `add_calendar_event`, `query_calendar`, `add_reminder`.
+Currently implemented tools (25): `add_shopping_items`, `query_shopping`, `check_shopping_item`, `clear_checked_items`, `add_calendar_event`, `query_calendar`, `add_reminder`, `create_note`, `query_notes`, `add_recipe`, `suggest_menu`, `add_weekly_menu`, `save_knowledge`, `search_knowledge`, `add_chore`, `query_chores`, `log_chore`, `add_pet`, `add_pet_diary_entry`, `add_pet_reminder`, `query_pet`, `save_investment_note`, `query_investment_notes`.
 
-`useClaudeInstead: true` is reserved for routing to a Claude Sonnet agent for long-reasoning tasks (e.g. `suggest_menu`) — the Claude integration (`agent/src/agent/claude.ts`) is not yet implemented.
+`useClaudeInstead: true` routes to Claude Sonnet via `agent/src/agent/claude.ts` (implemented — used for `suggest_menu`). The dashboard mirrors this in `dashboard/src/lib/jarvis/gemini.ts`.
 
 ---
 
@@ -132,7 +140,17 @@ TIMEZONE=Europe/Madrid
 ```
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+FAMILY_ID=
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_WEBHOOK_SECRET=       # openssl rand -hex 32
+GEMINI_API_KEY=
+ANTHROPIC_API_KEY=
+OPENAI_API_KEY=
+CRON_SECRET=                   # openssl rand -hex 32
+TIMEZONE=Europe/Madrid
 ```
+Full reference: `dashboard/.env.example`
 
 ---
 
@@ -153,9 +171,15 @@ Eres JARVIS, el mayordomo digital de la familia {family_name}.
 
 **Phase 0** (complete): Schema migrated, agent wired to Telegram + Supabase + Gemini, shopping + calendar + reminder tools live, dashboard with Next.js SSR + magic link auth, `supabase/seed.sql` exists.
 
-**Next — Fase 1**: Notas, bitácora de voz, Google Calendar sync, TTS replies.
+**Fase 1** (complete): Notas, bitácora de voz, embeddings semánticos, recetario, menú IA (Claude Sonnet).
 
-Subsequent phases: Bitacora + Menus + embeddings (Fase 2) | Tareas + Mascotas + Inversiones (Fase 3) | Rutinas + deploy (Fase 4) | React Native si Telegram se queda corto (Fase 5).
+**Fase 2** (complete): Dashboard — bitácora, recetario, panel actualizado.
+
+**Fase 3** (complete): Tareas domésticas, mascotas, inversiones (25 herramientas Telegram en total).
+
+**Fase 4** (complete): Cron jobs (reminder-dispatcher + morning-briefing), Telegram migrado de polling a **webhook** en el dashboard (serverless-safe con `waitUntil`), deploy files listos (Dockerfile, fly.toml, vercel.json).
+
+**Fase 5** (aplazada): React Native — Telegram + dashboard web son suficientes por ahora.
 
 ---
 
