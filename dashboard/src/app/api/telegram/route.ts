@@ -28,11 +28,14 @@ function buildSystemPrompt(familyName: string): string {
 - Fecha y hora actual: ${now}`;
 }
 
-// Lazy bot initialization — deferred so Next.js build doesn't fail without env vars
-let _bot: Bot | null = null;
-function getBot(): Bot {
-  if (!_bot) {
-    _bot = new Bot(process.env.TELEGRAM_BOT_TOKEN!);
+// Lazy bot initialization — deferred so Next.js build doesn't fail without env vars.
+// Returns a Promise so bot.init() (required by grammY for webhook mode) runs once.
+let _botPromise: Promise<Bot> | null = null;
+function getBot(): Promise<Bot> {
+  if (!_botPromise) {
+    _botPromise = (async () => {
+      const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN!);
+      _bot = bot;
 
     _bot.on('message', async (ctx) => {
       const supabase = createSupabaseAdminClient();
@@ -97,9 +100,15 @@ function getBot(): Bot {
         await supabase.from('voice_logs').insert({ family_id: FAMILY_ID, input_type: inputType, raw_input: text, tool_used: null, success: false });
       }
     });
+      await bot.init();
+      return bot;
+    })();
   }
-  return _bot;
+  return _botPromise;
 }
+
+// Keep a reference for type narrowing (unused at runtime — _botPromise is the source of truth)
+let _bot: Bot | null = null;
 
 export async function POST(req: Request) {
   // Verify Telegram secret token if configured
@@ -111,7 +120,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     // waitUntil keeps the function alive after response is sent (Vercel hobby: 10s max)
-    waitUntil(getBot().handleUpdate(body));
+    waitUntil(getBot().then(bot => bot.handleUpdate(body)));
     return Response.json({ ok: true });
   } catch (err) {
     console.error('[telegram/webhook] error:', err);
