@@ -33,7 +33,7 @@ export default async function NotesPage() {
         {list.length === 0 ? (
           <p className="pg-empty">
             <strong>Sin notas aún</strong>
-            Dile a JARVIS "anota que…" para guardar algo aquí.
+            Dile a JARVIS &ldquo;anota que…&rdquo; para guardar algo aquí.
           </p>
         ) : (
           <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}

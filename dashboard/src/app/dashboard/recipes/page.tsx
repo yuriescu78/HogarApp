@@ -32,7 +32,7 @@ export default async function RecipesPage() {
         {list.length === 0 ? (
           <p className="pg-empty">
             <strong>Recetario vacío</strong>
-            Dile a JARVIS "guarda la receta de…" para añadir aquí.
+            Dile a JARVIS &ldquo;guarda la receta de…&rdquo; para añadir aquí.
           </p>
         ) : (
           <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}

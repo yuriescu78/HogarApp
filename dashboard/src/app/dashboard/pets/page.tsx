@@ -55,7 +55,7 @@ export default async function PetsPage() {
         {list.length === 0 ? (
           <p className="pg-empty">
             <strong>Sin mascotas registradas</strong>
-            Dile a JARVIS "registra a mi mascota…" para añadir una.
+            Dile a JARVIS &ldquo;registra a mi mascota…&rdquo; para añadir una.
           </p>
         ) : (
           list.map(pet => {

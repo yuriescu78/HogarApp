@@ -45,7 +45,7 @@ export default async function ChoresPage() {
         {list.length === 0 ? (
           <p className="pg-empty">
             <strong>Sin tareas aún</strong>
-            Dile a JARVIS "añade la tarea de…" para crear una.
+            Dile a JARVIS &ldquo;añade la tarea de…&rdquo; para crear una.
           </p>
         ) : (
           <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}

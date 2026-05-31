@@ -8,7 +8,11 @@ import { runGeminiLoop } from '@/lib/jarvis/gemini';
 const FAMILY_ID = process.env.FAMILY_ID!;
 const TIMEZONE  = process.env.TIMEZONE ?? 'Europe/Madrid';
 
-const openai = new OpenAI();
+let _openai: OpenAI | null = null;
+function getOpenAI() {
+  if (!_openai) _openai = new OpenAI();
+  return _openai;
+}
 
 function buildSystemPrompt(familyName: string): string {
   const now = new Date().toLocaleString('es-ES', { timeZone: TIMEZONE });
@@ -24,72 +28,78 @@ function buildSystemPrompt(familyName: string): string {
 - Fecha y hora actual: ${now}`;
 }
 
-// Grammy bot — module-level so it's reused across warm invocations (stateless across calls)
-const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN!);
+// Lazy bot initialization — deferred so Next.js build doesn't fail without env vars
+let _bot: Bot | null = null;
+function getBot(): Bot {
+  if (!_bot) {
+    _bot = new Bot(process.env.TELEGRAM_BOT_TOKEN!);
 
-bot.on('message', async (ctx) => {
-  const supabase = createSupabaseAdminClient();
+    _bot.on('message', async (ctx) => {
+      const supabase = createSupabaseAdminClient();
 
-  // Auth: verify sender belongs to this family
-  const senderId = ctx.from?.id;
-  if (!senderId) return;
+      // Auth: verify sender belongs to this family
+      const senderId = ctx.from?.id;
+      if (!senderId) return;
 
-  const { data: member } = await supabase
-    .from('family_members')
-    .select('id, name, active')
-    .eq('family_id', FAMILY_ID)
-    .eq('telegram_id', senderId)
-    .eq('active', true)
-    .single();
+      const { data: member } = await supabase
+        .from('family_members')
+        .select('id, name, active')
+        .eq('family_id', FAMILY_ID)
+        .eq('telegram_id', senderId)
+        .eq('active', true)
+        .single();
 
-  if (!member) {
-    await ctx.reply('Disculpe, no le reconozco. Este servicio es privado.');
-    return;
+      if (!member) {
+        await ctx.reply('Disculpe, no le reconozco. Este servicio es privado.');
+        return;
+      }
+
+      let text: string | undefined;
+      let inputType: 'text' | 'voice' = 'text';
+
+      if (ctx.message?.text) {
+        text = ctx.message.text;
+      } else if (ctx.message?.voice) {
+        inputType = 'voice';
+        try {
+          const file   = await ctx.getFile();
+          const apiUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
+          const res    = await fetch(apiUrl);
+          const buffer = Buffer.from(await res.arrayBuffer());
+          const ogg    = await toFile(buffer, 'voice.ogg', { type: 'audio/ogg' });
+          const result = await getOpenAI().audio.transcriptions.create({ file: ogg, model: 'whisper-1', language: 'es' });
+          text = result.text;
+        } catch {
+          await ctx.reply('Disculpe, no pude transcribir el audio. Por favor escríbame.');
+          return;
+        }
+      }
+
+      if (!text) return;
+
+      // Sensitive data precheck (ADR-001)
+      if (containsSensitiveData(text)) {
+        await ctx.reply('Disculpe, no puedo procesar datos sensibles en este momento. Esta función estará disponible cuando la infraestructura local esté configurada.');
+        await supabase.from('voice_logs').insert({ family_id: FAMILY_ID, input_type: inputType, raw_input: null, tool_used: 'unsupported_sensitive_data', success: false });
+        return;
+      }
+
+      const { data: family } = await supabase.from('families').select('name').eq('id', FAMILY_ID).single();
+      const familyName = family?.name ?? 'García';
+      const toolCtx    = { supabase, familyId: FAMILY_ID, memberId: member.id };
+
+      try {
+        const reply = await runGeminiLoop(text, toolCtx, buildSystemPrompt(familyName));
+        await ctx.reply(reply);
+        await supabase.from('voice_logs').insert({ family_id: FAMILY_ID, input_type: inputType, raw_input: text, tool_used: null, success: true });
+      } catch {
+        await ctx.reply('Disculpe, estoy teniendo dificultades técnicas en este momento.');
+        await supabase.from('voice_logs').insert({ family_id: FAMILY_ID, input_type: inputType, raw_input: text, tool_used: null, success: false });
+      }
+    });
   }
-
-  let text: string | undefined;
-  let inputType: 'text' | 'voice' = 'text';
-
-  if (ctx.message?.text) {
-    text = ctx.message.text;
-  } else if (ctx.message?.voice) {
-    inputType = 'voice';
-    try {
-      const file   = await ctx.getFile();
-      const apiUrl = `https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
-      const res    = await fetch(apiUrl);
-      const buffer = Buffer.from(await res.arrayBuffer());
-      const ogg    = await toFile(buffer, 'voice.ogg', { type: 'audio/ogg' });
-      const result = await openai.audio.transcriptions.create({ file: ogg, model: 'whisper-1', language: 'es' });
-      text = result.text;
-    } catch {
-      await ctx.reply('Disculpe, no pude transcribir el audio. Por favor escríbame.');
-      return;
-    }
-  }
-
-  if (!text) return;
-
-  // Sensitive data precheck (ADR-001)
-  if (containsSensitiveData(text)) {
-    await ctx.reply('Disculpe, no puedo procesar datos sensibles en este momento. Esta función estará disponible cuando la infraestructura local esté configurada.');
-    await supabase.from('voice_logs').insert({ family_id: FAMILY_ID, input_type: inputType, raw_input: null, tool_used: 'unsupported_sensitive_data', success: false });
-    return;
-  }
-
-  const { data: family } = await supabase.from('families').select('name').eq('id', FAMILY_ID).single();
-  const familyName = family?.name ?? 'García';
-  const toolCtx    = { supabase, familyId: FAMILY_ID, memberId: member.id };
-
-  try {
-    const reply = await runGeminiLoop(text, toolCtx, buildSystemPrompt(familyName));
-    await ctx.reply(reply);
-    await supabase.from('voice_logs').insert({ family_id: FAMILY_ID, input_type: inputType, raw_input: text, tool_used: null, success: true });
-  } catch {
-    await ctx.reply('Disculpe, estoy teniendo dificultades técnicas en este momento.');
-    await supabase.from('voice_logs').insert({ family_id: FAMILY_ID, input_type: inputType, raw_input: text, tool_used: null, success: false });
-  }
-});
+  return _bot;
+}
 
 export async function POST(req: Request) {
   // Verify Telegram secret token if configured
@@ -101,7 +111,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     // waitUntil keeps the function alive after response is sent (Vercel hobby: 10s max)
-    waitUntil(bot.handleUpdate(body));
+    waitUntil(getBot().handleUpdate(body));
     return Response.json({ ok: true });
   } catch (err) {
     console.error('[telegram/webhook] error:', err);
