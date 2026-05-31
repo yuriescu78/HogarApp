@@ -3,7 +3,6 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "installCommand": "npm install",
-  "regions": ["mad1"],
   "crons": [
     { "path": "/api/cron/morning-briefing", "schedule": "30 8 * * *" }
   ]
