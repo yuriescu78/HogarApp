@@ -5,7 +5,6 @@
   "installCommand": "npm install",
   "regions": ["mad1"],
   "crons": [
-    { "path": "/api/cron/reminders",        "schedule": "*/5 * * * *" },
-    { "path": "/api/cron/morning-briefing", "schedule": "30 8 * * *"  }
+    { "path": "/api/cron/morning-briefing", "schedule": "30 8 * * *" }
   ]
 }
