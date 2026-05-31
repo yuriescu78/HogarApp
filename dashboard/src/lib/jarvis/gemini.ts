@@ -7,8 +7,17 @@ import {
 import Anthropic from '@anthropic-ai/sdk';
 import { tools, type ToolContext } from './tools';
 
-const genai      = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const anthropic  = new Anthropic();
+let _genai: GoogleGenerativeAI | null = null;
+function getGenAI() {
+  if (!_genai) _genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+  return _genai;
+}
+
+let _anthropic: Anthropic | null = null;
+function getAnthropic() {
+  if (!_anthropic) _anthropic = new Anthropic();
+  return _anthropic;
+}
 
 async function runClaudeForMenu(
   input: { days?: number; note?: string },
@@ -28,7 +37,7 @@ async function runClaudeForMenu(
   const days      = input.days ?? 7;
   const extraNote = input.note ? `\nNota adicional: ${input.note}` : '';
 
-  const message = await anthropic.messages.create({
+  const message = await getAnthropic().messages.create({
     model:      'claude-sonnet-4-6',
     max_tokens: 1024,
     messages: [{
@@ -48,7 +57,7 @@ export async function runGeminiLoop(
 ): Promise<string> {
   const declarations = tools.map(t => t.declaration as unknown as FunctionDeclaration);
 
-  const model = genai.getGenerativeModel({
+  const model = getGenAI().getGenerativeModel({
     model:             'gemini-2.5-flash',
     systemInstruction: systemPrompt,
     tools:             [{ functionDeclarations: declarations }],
