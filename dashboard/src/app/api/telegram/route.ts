@@ -95,7 +95,8 @@ function getBot(): Promise<Bot> {
         const reply = await runGeminiLoop(text, toolCtx, buildSystemPrompt(familyName));
         await ctx.reply(reply);
         await supabase.from('voice_logs').insert({ family_id: FAMILY_ID, input_type: inputType, raw_input: text, tool_used: null, success: true });
-      } catch {
+      } catch (err) {
+        console.error('[jarvis] runGeminiLoop error:', err);
         await ctx.reply('Disculpe, estoy teniendo dificultades técnicas en este momento.');
         await supabase.from('voice_logs').insert({ family_id: FAMILY_ID, input_type: inputType, raw_input: text, tool_used: null, success: false });
       }
