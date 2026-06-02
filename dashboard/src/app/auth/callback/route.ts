@@ -1,5 +1,4 @@
 import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest) {
@@ -11,15 +10,26 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=missing_code`);
   }
 
-  const cookieStore = cookies();
+  // Create the success response first so we can set cookies directly on it.
+  // Setting cookies via cookies() from next/headers does NOT propagate to a
+  // NextResponse.redirect — the browser never sees the session cookies and the
+  // middleware finds no session, sending the user back to /login in a loop.
+  const response = NextResponse.redirect(`${origin}${next}`);
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get:    (name)              => cookieStore.get(name)?.value,
-        set:    (name, value, opts) => { try { cookieStore.set({ name, value, ...opts }); } catch {} },
-        remove: (name, opts)        => { try { cookieStore.set({ name, value: '', ...opts }); } catch {} },
+        get:    (name)              => request.cookies.get(name)?.value,
+        set:    (name, value, opts) => {
+          request.cookies.set({ name, value, ...opts });
+          response.cookies.set({ name, value, ...opts });
+        },
+        remove: (name, opts)        => {
+          request.cookies.set({ name, value: '', ...opts });
+          response.cookies.delete({ name, ...opts });
+        },
       },
     }
   );
@@ -29,5 +39,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error.message)}`);
   }
 
-  return NextResponse.redirect(`${origin}${next}`);
+  return response;
 }

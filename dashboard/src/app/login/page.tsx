@@ -3,15 +3,16 @@
 export const dynamic = 'force-dynamic';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export default function LoginPage() {
+  const searchParams  = useSearchParams();
   const [email,   setEmail]   = useState('');
   const [token,   setToken]   = useState('');
   const [step,    setStep]    = useState<'email' | 'otp'>('email');
   const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState('');
+  const [error,   setError]   = useState(searchParams.get('error') ?? '');
 
   const supabase = createSupabaseBrowserClient();
   const router   = useRouter();
