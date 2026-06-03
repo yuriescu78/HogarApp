@@ -9,10 +9,10 @@ export const queryUsageCostDeclaration = {
   name:        'query_usage_cost',
   description: 'Consulta el coste acumulado en euros de uso de APIs de IA (Gemini). Útil para preguntas como "¿cuánto llevamos gastado este mes?"',
   parameters: {
-    type: 'object',
+    type: 'OBJECT',
     properties: {
       period: {
-        type:        'string',
+        type:        'STRING',
         enum:        ['hoy', 'semana', 'mes', 'total'],
         description: 'Período a consultar. Por defecto: mes en curso.',
       },
