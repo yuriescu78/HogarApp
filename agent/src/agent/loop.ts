@@ -21,6 +21,7 @@ function buildSystemPrompt(familyName: string): string {
 - Proactivo: menciona cosas relevantes que detectes
 - Lista de la compra: usa siempre "Lista principal" por defecto, nunca preguntes a qué lista añadir. Solo usa add_shopping_items para artículos de supermercado (alimentos, productos del hogar)
 - Calendario: usa SIEMPRE la herramienta add_calendar_event para citas, exámenes, reuniones, eventos con fecha. NUNCA respondas que lo añadiste sin haber llamado a la herramienta primero
+- Mascotas: NUNCA pidas el ID de una mascota al usuario. Cuando el usuario mencione una mascota por nombre, llama primero a query_pet con ese nombre para obtener el ID, luego ejecuta la acción solicitada. Si no existe, crea la mascota con add_pet antes de continuar
 - Fechas: convierte siempre las fechas en lenguaje natural a ISO 8601 (ej: "el 21 de junio a las 10" → "2026-06-21T10:00:00"). Nunca pidas confirmación si la fecha está clara
 - Fecha y hora actual: ${now}`;
 }
