@@ -23,6 +23,7 @@ import { addPetReminder, addPetReminderDeclaration, addPetReminderSchema } from 
 import { queryPet, queryPetDeclaration, queryPetSchema } from './pets.js';
 import { saveInvestmentNote, saveInvestmentNoteDeclaration, saveInvestmentNoteSchema } from './investments.js';
 import { queryInvestmentNotes, queryInvestmentNotesDeclaration, queryInvestmentNotesSchema } from './investments.js';
+import { queryUsageCost, queryUsageCostDeclaration, queryUsageCostSchema } from './usage.js';
 
 export interface ToolContext {
   supabase:  SupabaseClient;
@@ -177,6 +178,12 @@ export const tools: ToolDefinition[] = [
     schema: queryInvestmentNotesSchema,
     handler: (input, ctx) => queryInvestmentNotes(input, ctx.supabase, ctx.familyId),
     declaration: queryInvestmentNotesDeclaration, useClaudeInstead: false,
+  },
+  {
+    name: 'query_usage_cost', description: 'Consulta el coste acumulado en euros de APIs de IA',
+    schema: queryUsageCostSchema,
+    handler: (input, ctx) => queryUsageCost(input, ctx.supabase, ctx.familyId),
+    declaration: queryUsageCostDeclaration, useClaudeInstead: false,
   },
 ];
 

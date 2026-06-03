@@ -91,10 +91,28 @@ function getBot(): Promise<Bot> {
       const familyName = family?.name ?? 'García';
       const toolCtx    = { supabase, familyId: FAMILY_ID, memberId: member.id };
 
+      // Gemini 2.5 Flash pricing (USD per 1M tokens)
+      const PRICING: Record<string, { inputPer1M: number; outputPer1M: number }> = {
+        'gemini-2.5-flash': { inputPer1M: 0.075, outputPer1M: 0.30 },
+      };
+
       try {
-        const reply = await runGeminiLoop(text, toolCtx, buildSystemPrompt(familyName));
-        await ctx.reply(reply);
-        await supabase.from('voice_logs').insert({ family_id: FAMILY_ID, input_type: inputType, raw_input: text, tool_used: null, success: true });
+        const result   = await runGeminiLoop(text, toolCtx, buildSystemPrompt(familyName));
+        await ctx.reply(result.text);
+        const pricing  = PRICING[result.model] ?? PRICING['gemini-2.5-flash'];
+        const costUsd  = (result.tokensIn / 1_000_000) * pricing.inputPer1M
+                       + (result.tokensOut / 1_000_000) * pricing.outputPer1M;
+        await supabase.from('voice_logs').insert({
+          family_id:     FAMILY_ID,
+          input_type:    inputType,
+          raw_input:     text,
+          tool_used:     null,
+          success:       true,
+          tokens_input:  result.tokensIn,
+          tokens_output: result.tokensOut,
+          model:         result.model,
+          cost_usd:      costUsd,
+        });
       } catch (err) {
         console.error('[jarvis] runGeminiLoop error:', err);
         await ctx.reply('Disculpe, estoy teniendo dificultades técnicas en este momento.');

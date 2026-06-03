@@ -46,18 +46,34 @@ async function transcribeVoice(fileUrl: string): Promise<string> {
   return result.text;
 }
 
+// Gemini 2.5 Flash pricing (USD per 1M tokens, prompts ≤200k ctx)
+const PRICING: Record<string, { inputPer1M: number; outputPer1M: number }> = {
+  'gemini-2.5-flash': { inputPer1M: 0.075, outputPer1M: 0.30 },
+};
+
 async function logCommand(
   inputType: 'text' | 'voice',
   rawInput: string | null,
   toolUsed: string | null,
-  success: boolean
+  success: boolean,
+  usage?: { tokensIn: number; tokensOut: number; model: string }
 ) {
+  const pricing  = usage ? (PRICING[usage.model] ?? PRICING['gemini-2.5-flash']) : null;
+  const costUsd  = pricing && usage
+    ? (usage.tokensIn / 1_000_000) * pricing.inputPer1M
+      + (usage.tokensOut / 1_000_000) * pricing.outputPer1M
+    : null;
+
   await supabase.from('voice_logs').insert({
-    family_id:  FAMILY_ID,
-    input_type: inputType,
-    raw_input:  rawInput,
-    tool_used:  toolUsed,
+    family_id:     FAMILY_ID,
+    input_type:    inputType,
+    raw_input:     rawInput,
+    tool_used:     toolUsed,
     success,
+    tokens_input:  usage?.tokensIn  ?? null,
+    tokens_output: usage?.tokensOut ?? null,
+    model:         usage?.model     ?? null,
+    cost_usd:      costUsd,
   });
 }
 
@@ -115,9 +131,13 @@ export function createBot(): Bot {
     const familyName = await getFamilyName();
 
     try {
-      const reply = await runGeminiLoop(text, toolCtx, buildSystemPrompt(familyName));
-      await ctx.reply(reply);
-      await logCommand(inputType, text, null, true);
+      const result = await runGeminiLoop(text, toolCtx, buildSystemPrompt(familyName));
+      await ctx.reply(result.text);
+      await logCommand(inputType, text, null, true, {
+        tokensIn:  result.tokensIn,
+        tokensOut: result.tokensOut,
+        model:     result.model,
+      });
     } catch {
       // Gemini unavailable — try regex fallback
       const fallback = parseFallback(text);

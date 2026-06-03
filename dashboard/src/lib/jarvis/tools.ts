@@ -309,6 +309,59 @@ async function queryInvestmentNotes(input: z.infer<typeof queryInvestmentNotesSc
   return { success: true, notes: data ?? [] };
 }
 
+// ── Usage cost ───────────────────────────────────────────────────────────────
+const USD_TO_EUR = 0.92;
+const USAGE_PRICING: Record<string, { inputPer1M: number; outputPer1M: number }> = {
+  'gemini-2.5-flash': { inputPer1M: 0.075, outputPer1M: 0.30 },
+};
+
+async function queryUsageCost(
+  input: { period?: string },
+  supabase: SupabaseClient,
+  familyId: string
+) {
+  const period = input.period ?? 'mes';
+  const now    = new Date();
+  let   since: string | null = null;
+
+  if (period === 'hoy') {
+    since = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  } else if (period === 'semana') {
+    const day  = now.getDay();
+    const diff = now.getDate() - (day === 0 ? 6 : day - 1);
+    since = new Date(now.getFullYear(), now.getMonth(), diff).toISOString();
+  } else if (period === 'mes') {
+    since = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  }
+
+  let query = supabase
+    .from('voice_logs')
+    .select('tokens_input, tokens_output, model, cost_usd')
+    .eq('family_id', familyId)
+    .not('cost_usd', 'is', null);
+
+  if (since) query = query.gte('created_at', since);
+
+  const { data } = await query;
+  const rows = data ?? [];
+
+  const requests  = rows.length;
+  const tokensIn  = rows.reduce((s: number, r: Record<string, unknown>) => s + (Number(r.tokens_input)  || 0), 0);
+  const tokensOut = rows.reduce((s: number, r: Record<string, unknown>) => s + (Number(r.tokens_output) || 0), 0);
+  const costUsd   = rows.reduce((s: number, r: Record<string, unknown>) => s + (Number(r.cost_usd)      || 0), 0);
+  const costEur   = costUsd * USD_TO_EUR;
+
+  const label: Record<string, string> = { hoy: 'hoy', semana: 'esta semana', mes: 'este mes', total: 'en total' };
+  const summary = requests === 0
+    ? `No hay registros de uso ${label[period] ?? period} (el logging de tokens es reciente).`
+    : `${label[period] ?? period}: ${requests} mensajes, ${(tokensIn + tokensOut).toLocaleString('es-ES')} tokens (${tokensIn.toLocaleString('es-ES')} entrada + ${tokensOut.toLocaleString('es-ES')} salida). Coste estimado: ${costEur.toFixed(4)} € (${costUsd.toFixed(4)} USD).`;
+
+  return { period, requests, tokensIn, tokensOut, costUsd, costEur, summary };
+}
+
+// Suppress unused import warning
+void USAGE_PRICING;
+
 // ── Tool registry ─────────────────────────────────────────────────────────────
 type Handler = (input: Record<string, unknown>, ctx: ToolContext) => Promise<unknown>;
 
@@ -344,6 +397,7 @@ export const tools: ToolDef[] = [
   { name: 'query_pet',            schema: queryPetSchema,            handler: (i, c) => queryPet(i, c.supabase, c.familyId),            useClaudeInstead: false, declaration: { name: 'query_pet',            description: 'Consulta información de una mascota y sus últimas entradas del diario.', parameters: { type: 'OBJECT', properties: { name: { type: 'STRING', description: 'Nombre de la mascota a buscar.' }, limit: { type: 'NUMBER', description: 'Número máximo de entradas del diario (1-10). Por defecto 5.' } }, required: [] } } },
   { name: 'save_investment_note', schema: saveInvestmentNoteSchema,  handler: (i, c) => saveInvestmentNote(i, c.supabase, c.familyId),  useClaudeInstead: false, declaration: { name: 'save_investment_note', description: 'Guarda una nota de inversión o finanzas familiares. Los datos sensibles (IBANs, etc.) se almacenan enmascarados.', parameters: { type: 'OBJECT', properties: { title: { type: 'STRING', description: 'Título de la nota (p.ej. "Cartera Bogle").' }, content: { type: 'STRING', description: 'Contenido de la nota.' } }, required: ['title', 'content'] } } },
   { name: 'query_investment_notes', schema: queryInvestmentNotesSchema, handler: (i, c) => queryInvestmentNotes(i, c.supabase, c.familyId), useClaudeInstead: false, declaration: { name: 'query_investment_notes', description: 'Consulta las notas de inversión y finanzas familiares (muestra contenido enmascarado).', parameters: { type: 'OBJECT', properties: { limit: { type: 'NUMBER', description: 'Número máximo de notas (1-10). Por defecto 5.' } }, required: [] } } },
+  { name: 'query_usage_cost', schema: z.object({ period: z.enum(['hoy', 'semana', 'mes', 'total']).default('mes') }), handler: (i, c) => queryUsageCost(i, c.supabase, c.familyId), useClaudeInstead: false, declaration: { name: 'query_usage_cost', description: 'Consulta el coste acumulado en euros de uso de APIs de IA (Gemini). Útil para preguntas como "¿cuánto llevamos gastado este mes?"', parameters: { type: 'OBJECT', properties: { period: { type: 'STRING', enum: ['hoy', 'semana', 'mes', 'total'], description: 'Período a consultar. Por defecto: mes en curso.' } }, required: [] } } },
 ];
 
 export function findTool(name: string) {

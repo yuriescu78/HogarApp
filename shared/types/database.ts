@@ -770,35 +770,47 @@ export type Database = {
       voice_logs: {
         Row: {
           created_at: string | null
+          cost_usd: number | null
           family_id: string
           id: string
           input_type: string
           member_id: string | null
+          model: string | null
           parsed_intent: string | null
           raw_input: string | null
           success: boolean | null
+          tokens_input: number | null
+          tokens_output: number | null
           tool_used: string | null
         }
         Insert: {
           created_at?: string | null
+          cost_usd?: number | null
           family_id: string
           id?: string
           input_type: string
           member_id?: string | null
+          model?: string | null
           parsed_intent?: string | null
           raw_input?: string | null
           success?: boolean | null
+          tokens_input?: number | null
+          tokens_output?: number | null
           tool_used?: string | null
         }
         Update: {
           created_at?: string | null
+          cost_usd?: number | null
           family_id?: string
           id?: string
           input_type?: string
           member_id?: string | null
+          model?: string | null
           parsed_intent?: string | null
           raw_input?: string | null
           success?: boolean | null
+          tokens_input?: number | null
+          tokens_output?: number | null
           tool_used?: string | null
         }
         Relationships: [

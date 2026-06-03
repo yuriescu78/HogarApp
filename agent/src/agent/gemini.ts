@@ -9,15 +9,23 @@ import { tools, type ToolContext } from '../tools/index.js';
 
 const genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
+export interface GeminiResult {
+  text:      string;
+  tokensIn:  number;
+  tokensOut: number;
+  model:     string;
+}
+
 export async function runGeminiLoop(
   userMessage: string,
   ctx: ToolContext,
   systemPrompt: string
-): Promise<string> {
+): Promise<GeminiResult> {
+  const MODEL      = 'gemini-2.5-flash';
   const declarations = tools.map(t => t.declaration as unknown as FunctionDeclaration);
 
   const model = genai.getGenerativeModel({
-    model:             'gemini-2.5-flash',
+    model:             MODEL,
     systemInstruction: systemPrompt,
     tools:             [{ functionDeclarations: declarations }],
     toolConfig: {
@@ -27,6 +35,9 @@ export async function runGeminiLoop(
 
   const chat = model.startChat();
   let response = await chat.sendMessage(userMessage);
+
+  let tokensIn  = response.response.usageMetadata?.promptTokenCount     ?? 0;
+  let tokensOut = response.response.usageMetadata?.candidatesTokenCount ?? 0;
 
   let iterations = 0;
   while (response.response.functionCalls()?.length && iterations < 10) {
@@ -81,7 +92,9 @@ export async function runGeminiLoop(
     }
 
     response = await chat.sendMessage(resultParts);
+    tokensIn  += response.response.usageMetadata?.promptTokenCount     ?? 0;
+    tokensOut += response.response.usageMetadata?.candidatesTokenCount ?? 0;
   }
 
-  return response.response.text();
+  return { text: response.response.text(), tokensIn, tokensOut, model: MODEL };
 }
