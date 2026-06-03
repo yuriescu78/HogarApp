@@ -135,15 +135,16 @@ export const queryPetSchema = z.object({
 
 export type QueryPetInput = z.input<typeof queryPetSchema>;
 
-type PetInfo = { id: string; name: string; species: string; breed: string | null; birth_date: string | null };
-type DiaryEntry = { id: string; entry: string; category: string | null; created_at: string };
+type PetInfo      = { id: string; name: string; species: string; breed: string | null; birth_date: string | null };
+type DiaryEntry   = { id: string; entry: string; category: string | null; created_at: string };
+type PetReminder  = { id: string; title: string; remind_at: string };
 
 export async function queryPet(
   input: QueryPetInput,
   supabase: SupabaseClient,
   familyId: string
 ): Promise<
-  | { success: true; pet: PetInfo; diary: DiaryEntry[] }
+  | { success: true; pet: PetInfo; diary: DiaryEntry[]; upcoming_reminders: PetReminder[] }
   | { success: false; error: string }
 > {
   let petQuery = supabase
@@ -159,20 +160,36 @@ export async function queryPet(
 
   if (!petData) return { success: false, error: `No encontré ninguna mascota con ese nombre.` };
 
-  const { data: diaryData } = await supabase
-    .from('pet_diary')
-    .select('id, entry, category, created_at')
-    .eq('pet_id', petData.id)
-    .eq('family_id', familyId)
-    .order('created_at', { ascending: false })
-    .limit(input.limit ?? 5);
+  const [{ data: diaryData }, { data: reminderData }] = await Promise.all([
+    supabase
+      .from('pet_diary')
+      .select('id, entry, category, created_at')
+      .eq('pet_id', petData.id)
+      .eq('family_id', familyId)
+      .order('created_at', { ascending: false })
+      .limit(input.limit ?? 5),
+    supabase
+      .from('pet_reminders')
+      .select('id, title, remind_at')
+      .eq('pet_id', petData.id)
+      .eq('family_id', familyId)
+      .eq('sent', false)
+      .gte('remind_at', new Date().toISOString())
+      .order('remind_at', { ascending: true })
+      .limit(5),
+  ]);
 
-  return { success: true, pet: petData, diary: (diaryData ?? []) as DiaryEntry[] };
+  return {
+    success:            true,
+    pet:                petData,
+    diary:              (diaryData   ?? []) as DiaryEntry[],
+    upcoming_reminders: (reminderData ?? []) as PetReminder[],
+  };
 }
 
 export const queryPetDeclaration = {
   name:        'query_pet',
-  description: 'Consulta información de una mascota y sus últimas entradas del diario.',
+  description: 'Consulta información de una mascota, sus últimas entradas del diario y sus próximos recordatorios (vacunas, revisiones).',
   parameters: {
     type: 'OBJECT',
     properties: {
