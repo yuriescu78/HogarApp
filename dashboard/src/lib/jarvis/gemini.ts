@@ -62,7 +62,7 @@ export async function runGeminiLoop(
   ctx: ToolContext,
   systemPrompt: string
 ): Promise<GeminiResult> {
-  const MODEL        = 'gemini-2.5-flash';
+  const MODEL        = 'gemini-2.0-flash';
   const declarations = tools.map(t => t.declaration as unknown as FunctionDeclaration);
 
   const model = getGenAI().getGenerativeModel({

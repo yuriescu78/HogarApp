@@ -95,6 +95,7 @@ function getBot(): Promise<Bot> {
       // Gemini 2.5 Flash pricing (USD per 1M tokens)
       const PRICING: Record<string, { inputPer1M: number; outputPer1M: number }> = {
         'gemini-2.5-flash': { inputPer1M: 0.075, outputPer1M: 0.30 },
+        'gemini-2.0-flash': { inputPer1M: 0.10,  outputPer1M: 0.40  },
       };
 
       try {

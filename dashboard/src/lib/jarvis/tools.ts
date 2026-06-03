@@ -313,6 +313,7 @@ async function queryInvestmentNotes(input: z.infer<typeof queryInvestmentNotesSc
 const USD_TO_EUR = 0.92;
 const USAGE_PRICING: Record<string, { inputPer1M: number; outputPer1M: number }> = {
   'gemini-2.5-flash': { inputPer1M: 0.075, outputPer1M: 0.30 },
+  'gemini-2.0-flash': { inputPer1M: 0.10,  outputPer1M: 0.40  },
 };
 
 async function queryUsageCost(
