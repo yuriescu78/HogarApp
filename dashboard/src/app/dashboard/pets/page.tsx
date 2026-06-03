@@ -2,7 +2,7 @@ import { createSupabaseServerClient, createSupabaseAdminClient } from '@/lib/sup
 import { redirect } from 'next/navigation';
 
 export default async function PetsPage() {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 

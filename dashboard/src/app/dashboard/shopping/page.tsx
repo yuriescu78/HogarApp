@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { toggleItem, clearChecked } from './actions';
 
 export default async function ShoppingPage() {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
