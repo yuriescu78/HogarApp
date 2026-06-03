@@ -50,7 +50,8 @@ async function transcribeVoice(fileUrl: string): Promise<string> {
 // Gemini 2.5 Flash pricing (USD per 1M tokens, prompts ≤200k ctx)
 const PRICING: Record<string, { inputPer1M: number; outputPer1M: number }> = {
   'gemini-2.5-flash': { inputPer1M: 0.075, outputPer1M: 0.30 },
-  'gemini-2.0-flash': { inputPer1M: 0.10,  outputPer1M: 0.40  },
+  'gemini-2.0-flash': { inputPer1M: 0.10,  outputPer1M: 0.40 },
+  'gpt-4o-mini':      { inputPer1M: 0.15,  outputPer1M: 0.60 },
 };
 
 async function logCommand(
